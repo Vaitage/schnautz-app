@@ -171,6 +171,8 @@ tr:last-child td{border-bottom:0}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
 .sync.on i{background:var(--felt)}
 .small{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:30;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);text-align:center}
 </style>
 
 <div class="wrap">
@@ -203,6 +205,8 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <div id="sheetRoot"></div>
+<input id="bkFile" type="file" accept=".json,application/json" hidden>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 const COLORS=["#e63946","#f77f00","#fcbf49","#8ac926","#2a9d8f","#1982c4","#6a4c93","#ff5d8f",
@@ -261,12 +265,70 @@ $("#settingsBtn").onclick=()=>{
     <label>Darstellung</label>
     <div class="seg" id="themeSeg">${opt("auto","Automatisch")}${opt("light","Hell")}${opt("dark","Dunkel")}</div>
     <div class="small">„Automatisch“ folgt der Einstellung des Geräts.</div>
+    <label>Daten sichern</label>
+    <div class="actions two" style="margin-top:0"><button class="btn" id="bkSave">Sichern</button><button class="btn" id="bkLoad">Wiederherstellen</button></div>
+    <div class="small">${games.length} gespeicherte ${games.length===1?"Spiel":"Spiele"} und ${state.players.length} Spieler am Tisch. „Sichern“ speichert alles als Datei, „Wiederherstellen“ spielt eine solche Datei wieder ein, auch auf einem anderen Gerät.</div>
     <div class="actions"><button class="btn primary" data-x="close">Fertig</button></div>`,r=>{
+    r.querySelector("#bkSave").onclick=exportBackup;
+    r.querySelector("#bkLoad").onclick=()=>{const f=$("#bkFile");f.value="";f.click()};
     r.querySelector("#themeSeg").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
       theme=b.dataset.t;lsSet("schnautz_theme",theme);applyTheme(theme);
       r.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed",x===b))};
   });
 };
+
+/* ---------- Sichern & Wiederherstellen ---------- */
+let toastT=null;
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+async function exportBackup(){
+  const d=new Date(),pad=n=>String(n).padStart(2,"0");
+  const name=`schnautz-sicherung-${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}.json`;
+  const text=JSON.stringify({app:"schnautz-zaehler",version:1,exportedAt:d.toISOString(),players:state.players,games},null,2);
+  if(window.claude?.use){ // in Claude
+    const dl=await window.claude.use("downloads");
+    if(dl){try{await dl.save({filename:name,data:text});toast("Sicherung gespeichert")}catch(e){if(e?.code!=="declined")toast("Speichern hat nicht geklappt")}return}
+  }
+  const file=new File([text],name,{type:"application/json"});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"Schnautz Sicherung"});toast("Sicherung bereit");return}}
+  catch(e){if(e&&e.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Sicherung heruntergeladen");
+}
+function validBackup(o){
+  if(!o||typeof o!=="object"||!Array.isArray(o.games)||!Array.isArray(o.players))return null;
+  const num=v=>Math.max(0,Math.round(Number(v)||0));
+  const col=v=>/^#[0-9a-f]{3,8}$/i.test(String(v))?String(v):"#888888";
+  const players=o.players.filter(p=>p&&p.name).map(p=>({id:String(p.id||uid()).replace(/[^\w-]/g,"").slice(0,40)||uid(),name:String(p.name).slice(0,24),color:col(p.color),points:num(p.points),schnautz:num(p.schnautz)}));
+  const gs=o.games.filter(g=>g&&Array.isArray(g.players)).map(g=>({id:String(g.id||uid()).replace(/[^\w-]/g,"").slice(0,40)||uid(),endedAt:Number(g.endedAt)||Date.now(),
+    players:g.players.filter(p=>p&&p.name).map(p=>({name:String(p.name).slice(0,24),color:col(p.color),points:num(p.points),schnautz:num(p.schnautz),place:Math.max(1,num(p.place))}))}));
+  return {players,games:gs};
+}
+async function writeGames(list,replace){
+  if(gamesCol){
+    if(replace){const keep=new Set(list.map(g=>g.id));for(const g of games)if(!keep.has(g.id)){try{await gamesCol.doc(g.id).delete()}catch(e){}}}
+    for(const g of list){try{await gamesCol.doc(g.id).set(g)}catch(e){console.warn(e)}}
+  }else{
+    const map=new Map((replace?[]:games).map(g=>[g.id,g]));list.forEach(g=>map.set(g.id,g));
+    games=[...map.values()].sort((a,b)=>b.endedAt-a.endedAt);lsSet("schnautz_games",games);renderStats();
+  }
+}
+$("#bkFile").addEventListener("change",async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  let data=null;try{data=validBackup(JSON.parse(await f.text()))}catch(_){}
+  if(!data)return confirmSheet("Datei passt nicht","Das ist keine Schnautz-Sicherung. Wähle eine Datei, die mit „schnautz-sicherung“ beginnt.",null);
+  const have=new Set(games.map(g=>g.id)),neu=data.games.filter(g=>!have.has(g.id)).length;
+  openSheet(`<h3>Wiederherstellen</h3>
+    <p>In der Datei: ${data.games.length} ${data.games.length===1?"Spiel":"Spiele"}, davon ${neu} neu, und ${data.players.length} Spieler am Tisch.</p>
+    <p><b>Hinzufügen</b> übernimmt die neuen Spiele und lässt alles Bisherige stehen. <b>Alles ersetzen</b> löscht die aktuelle Statistik und den Tisch und spielt die Sicherung ein.</p>
+    <div class="actions two"><button class="btn" data-x="add">Hinzufügen</button><button class="btn danger" data-x="rep">Alles ersetzen</button></div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-x="close">Abbrechen</button></div>`,r=>{
+    r.querySelector('[data-x="add"]').onclick=async()=>{closeSheet();
+      if(!state.players.length&&data.players.length){state.players=data.players;changed()}
+      await writeGames(data.games,false);toast(`${neu} ${neu===1?"Spiel":"Spiele"} hinzugefügt`)};
+    r.querySelector('[data-x="rep"]').onclick=async()=>{closeSheet();
+      state.players=data.players;changed();await writeGames(data.games,true);toast("Sicherung eingespielt")};
+  });
+});
 
 /* ---------- Tisch ---------- */
 function tally(n){
