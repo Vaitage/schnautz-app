@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Schnautz Zähler</title>
+<meta name="theme-color" content="#eef1ec">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Schnautz">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Wirtshaustisch – farbige Spielerkacheln im Raster (Handy 1, Tablet 2–3 Spalten), Schnautz als Strichliste, Aktionen unten am Daumen */
+:root{
+  --bg:#eef1ec; --paper:#fbfcf9; --ink:#18211c; --muted:#5d6b63; --line:#d6ddd7;
+  --felt:#1d5a43; --felt-ink:#ffffff; --minus:#b23a2f; --soft:#e3e9e4;
+  --gold:#c9a227; --silver:#98a3a7; --bronze:#a8693b;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1511; --paper:#15201a; --ink:#e7eee9; --muted:#93a399; --line:#27352d;
+  --felt:#4bb187; --felt-ink:#06130d; --minus:#f07b6e; --soft:#1d2a23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1511; --paper:#15201a; --ink:#e7eee9; --muted:#93a399; --line:#27352d;
+  --felt:#4bb187; --felt-ink:#06130d; --minus:#f07b6e; --soft:#1d2a23; color-scheme:dark}
+
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--felt);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 120px}
+
+header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:900;font-size:34px;line-height:1;margin:0 auto 0 0;letter-spacing:.01em;text-transform:uppercase}
+h1 span{color:var(--felt)}
+.seg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:9px 16px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgb(0 0 0 / .12)}
+.gear{border:0;background:var(--soft);width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.gear svg{width:21px;height:21px}
+
+.add{display:flex;gap:8px;margin-bottom:14px;max-width:560px}
+.add input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 14px;border-radius:var(--r);
+  border:1.5px solid var(--line);background:var(--paper);color:var(--ink)}
+.btn{border:0;border-radius:var(--r);padding:12px 16px;font-weight:700;background:var(--soft)}
+.btn.primary{background:var(--felt);color:var(--felt-ink)}
+.btn.danger{background:none;color:var(--minus);border:1.5px solid currentColor}
+.btn:active{transform:scale(.97)}
+
+/* Spielerkacheln: Farbe kommt pro Kachel über --tc (Fläche) und --ti (Schrift) */
+.list{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.tile{--tc:#888;--ti:#fff;background:var(--tc);color:var(--ti);border-radius:22px;padding:14px;
+  display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"place name tools" "pts pts pts" "sch sch sch";
+  gap:10px;align-items:center;box-shadow:0 1px 0 rgb(0 0 0 / .06),inset 0 0 0 1px rgb(0 0 0 / .06);transition:background .2s}
+.place{grid-area:place;font-family:var(--display);font-weight:900;font-size:24px;min-width:26px;opacity:.75}
+.name{grid-area:name;border:0;background:none;color:inherit;text-align:left;font-weight:700;font-size:20px;padding:4px 0;
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tools{grid-area:tools;display:flex;gap:2px}
+.icon{border:0;background:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:inherit;opacity:.8}
+.icon:active{background:color-mix(in srgb,var(--ti) 16%,transparent)}
+.icon svg{width:20px;height:20px}
+
+.pts{grid-area:pts;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
+.pbtn{width:64px;height:64px;border-radius:18px;border:0;font-size:34px;font-weight:700;line-height:1;display:grid;place-items:center}
+.pbtn.minus{background:color-mix(in srgb,var(--ti) 16%,transparent);color:var(--ti)}
+.pbtn.plus{background:var(--ti);color:var(--tc)}
+.pbtn:active{transform:scale(.94)}
+.score{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+
+.sch{grid-area:sch;display:flex;align-items:center;gap:10px;min-width:0;padding-top:10px;
+  border-top:1px solid color-mix(in srgb,var(--ti) 22%,transparent)}
+.sch .mid{flex:1;min-width:0}
+.sch .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
+.sbtn{width:40px;height:40px;border-radius:12px;border:1.5px solid color-mix(in srgb,var(--ti) 35%,transparent);background:none;color:inherit;font-weight:700;font-size:20px;line-height:1}
+.sbtn:active{background:color-mix(in srgb,var(--ti) 16%,transparent)}
+.tally{display:flex;flex-wrap:wrap;gap:7px;align-items:center;min-height:26px}
+.five{position:relative;display:inline-flex;gap:3px;height:22px}
+.five i{display:block;width:3px;height:22px;background:currentColor;border-radius:2px}
+.five.done::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:3px;background:currentColor;border-radius:2px;transform:rotate(-28deg)}
+.tnum{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;margin-left:auto}
+.tzero{opacity:.7;font-size:13px}
+
+.empty{background:var(--paper);border:1.5px dashed var(--line);border-radius:18px;padding:28px 18px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.bar .btn{padding:15px}
+.note{font-size:12px;color:var(--muted);text-align:center;margin-top:14px}
+
+/* Tablet: größer, mehr Luft */
+@media (min-width:760px){
+  body{font-size:16px}
+  h1{font-size:42px}
+  .list{gap:16px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+  .tile{padding:18px;border-radius:26px}
+  .name{font-size:24px}
+  .pbtn{width:80px;height:80px;font-size:42px;border-radius:22px}
+  .score{font-size:84px}
+  .bar .btn{padding:18px;font-size:17px}
+}
+
+/* Statistik */
+.statwrap{max-width:900px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+.kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.kpi b{font-family:var(--display);font-weight:900;font-size:30px;line-height:1.1;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+h2{font-family:var(--display);font-weight:800;font-size:22px;text-transform:uppercase;letter-spacing:.02em;margin:18px 0 8px}
+.tbl{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th,td{padding:11px 8px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+th:first-child,td:first-child{text-align:left;padding-left:12px}
+tr:last-child td{border-bottom:0}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:7px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}
+.medal{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:800;color:#1b1b1b}
+.m1{background:var(--gold)}.m2{background:var(--silver)}.m3{background:var(--bronze);color:#fff}
+.games{display:grid;gap:8px}
+.game{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.ghead{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:6px}
+.ghead button{border:0;background:none;color:var(--muted);font-size:13px;padding:4px 6px}
+.res{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:999px;font-size:13px;font-weight:600}
+.chip .medal{width:22px;height:22px;box-shadow:0 0 0 2px rgb(255 255 255 / .5)}
+.medal.pl{background:rgb(0 0 0 / .18);color:inherit}
+.chip em{font-style:normal;opacity:.8;font-weight:500}
+
+/* Sheet */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:520px;border-radius:22px 22px 0 0;max-height:88%;overflow:auto;
+  padding-top:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));
+  animation:up .22s ease-out}
+@media (min-width:760px){.scrim{align-items:center}.sheet{border-radius:22px;padding-bottom:18px}}
+@keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.tile{transition:none}}
+.sheet h3{font-family:var(--display);font-weight:900;font-size:26px;text-transform:uppercase;margin:0 0 6px}
+.sheet p{color:var(--muted);margin:0 0 14px;line-height:1.45}
+.sheet label{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.sheet input[type=text]{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.sheet .seg{width:100%}.sheet .seg button{flex:1}
+.sw{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.sw button{aspect-ratio:1;max-width:100%;border-radius:50%;border:0;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}
+.sw button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
+.custom{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--muted)}
+.custom input{width:46px;height:36px;border:0;padding:0;background:none}
+.preview{margin-top:14px;border-radius:16px;padding:12px 14px;font-weight:700;font-size:18px}
+.actions{display:grid;gap:8px;margin-top:18px}
+.actions.two{grid-template-columns:1fr 1fr}
+.rank{display:grid;gap:6px;margin:4px 0 6px}
+.rank div{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;font-weight:600}
+.rank b{font-family:var(--display);font-size:26px;margin-left:auto;font-variant-numeric:tabular-nums}
+.rank em{font-style:normal;opacity:.8;font-weight:500}
+.sync{display:inline-flex;align-items:center;gap:6px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.sync.on i{background:var(--felt)}
+.small{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Schnautz<span>.</span></h1>
+    <div class="seg" role="tablist">
+      <button id="tab-tisch" role="tab" aria-selected="true" data-tab="tisch">Tisch</button>
+      <button id="tab-stats" role="tab" aria-selected="false" data-tab="stats">Statistik</button>
+    </div>
+    <button class="gear" id="settingsBtn" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+  </header>
+
+  <section id="view-tisch">
+    <form class="add" id="addForm" autocomplete="off">
+      <input id="newName" type="text" placeholder="Spieler hinzufügen …" maxlength="24" enterkeyhint="done">
+      <button class="btn primary" type="submit">Hinzu</button>
+    </form>
+    <div class="list" id="list"></div>
+    <div class="note"><span class="sync" id="sync"><i></i><span>Auf diesem Gerät gespeichert</span></span></div>
+  </section>
+
+  <section id="view-stats" class="statwrap" hidden></section>
+</div>
+
+<div class="bar" id="bar">
+  <div class="in">
+    <button class="btn" id="resetAll">Alle zurücksetzen</button>
+    <button class="btn primary" id="endGame">Spiel beenden</button>
+  </div>
+</div>
+
+<div id="sheetRoot"></div>
+
+<script>
+const COLORS=["#e63946","#f77f00","#fcbf49","#8ac926","#2a9d8f","#1982c4","#6a4c93","#ff5d8f",
+              "#8d5524","#4a4e69","#1b1b1b","#f1f1f1","#b5179e","#00b4d8","#606c38","#c1121f"];
+let state={players:[]};
+let games=[];
+let db=null, liveRef=null, gamesCol=null;
+let dirty=false, saving=false, saveTimer=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+
+function inkOn(hex){
+  const h=String(hex).replace("#","");const n=h.length===3?h.split("").map(c=>c+c).join(""):h.padEnd(6,"8");
+  const [r,g,b]=[0,2,4].map(i=>parseInt(n.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:((v+.055)/1.055)**2.4);
+  return (.2126*r+.7152*g+.0722*b)>.36?"#151515":"#ffffff";
+}
+const tint=c=>`--tc:${esc(c)};--ti:${inkOn(c)};background:var(--tc);color:var(--ti)`;
+function ranks(list){ // gleiche Punkte = gleicher Platz
+  const s=[...list].sort((a,b)=>a.points-b.points);
+  return s.map(p=>({...p,place:s.findIndex(q=>q.points===p.points)+1}));
+}
+
+/* ---------- Speichern ---------- */
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function changed(){dirty=true;lsSet("schnautz_live",state);clearTimeout(saveTimer);saveTimer=setTimeout(persist,500);render()}
+async function persist(){
+  if(!liveRef){dirty=false;return}
+  if(saving){clearTimeout(saveTimer);saveTimer=setTimeout(persist,300);return}
+  saving=true;dirty=false;
+  try{await liveRef.set({players:state.players,updatedAt:Date.now()})}catch(e){console.warn(e)}
+  saving=false;
+}
+async function saveGame(g){
+  if(gamesCol){try{await gamesCol.doc(g.id).set(g);return}catch(e){console.warn(e)}}
+  games=[g,...games];lsSet("schnautz_games",games);renderStats();
+}
+async function deleteGame(id){
+  if(gamesCol){try{await gamesCol.doc(id).delete();return}catch(e){console.warn(e)}}
+  games=games.filter(g=>g.id!==id);lsSet("schnautz_games",games);renderStats();
+}
+
+/* ---------- Darstellung ---------- */
+function applyTheme(t){
+  const r=document.documentElement;
+  if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
+  const dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dark?"#0d1511":"#eef1ec";
+}
+let theme=lsGet("schnautz_theme","auto");applyTheme(theme);
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>applyTheme(theme));
+$("#settingsBtn").onclick=()=>{
+  const opt=(v,l)=>`<button type="button" data-t="${v}" aria-pressed="${theme===v}">${l}</button>`;
+  openSheet(`<h3>Einstellungen</h3>
+    <label>Darstellung</label>
+    <div class="seg" id="themeSeg">${opt("auto","Automatisch")}${opt("light","Hell")}${opt("dark","Dunkel")}</div>
+    <div class="small">„Automatisch“ folgt der Einstellung des Geräts.</div>
+    <div class="actions"><button class="btn primary" data-x="close">Fertig</button></div>`,r=>{
+    r.querySelector("#themeSeg").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
+      theme=b.dataset.t;lsSet("schnautz_theme",theme);applyTheme(theme);
+      r.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed",x===b))};
+  });
+};
+
+/* ---------- Tisch ---------- */
+function tally(n){
+  if(!n)return '<span class="tzero">noch keiner</span>';
+  let h="",left=n;const groups=Math.min(Math.ceil(n/5),4);
+  for(let g=0;g<groups&&left>0;g++){const c=Math.min(5,left);left-=c;
+    h+=`<span class="five${c===5?" done":""}">${"<i></i>".repeat(Math.min(c,4))}</span>`}
+  if(n>20)h+='<span>…</span>';
+  return h+`<span class="tnum">${n}</span>`;
+}
+const ICON_RESET='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
+const ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
+function render(){
+  const L=$("#list"), P=state.players;
+  if(!P.length){L.innerHTML='<div class="empty"><b>Noch niemand am Tisch</b>Trag oben die Namen ein. Jeder bekommt eine eigene Farbe, Punkte und Schnautz-Striche.</div>';return}
+  const anyPts=P.some(p=>p.points>0);
+  const rk=Object.fromEntries(ranks(P).map(p=>[p.id,p.place]));
+  L.innerHTML=P.map(p=>`
+    <div class="tile" style="--tc:${esc(p.color)};--ti:${inkOn(p.color)}">
+      <span class="place">${anyPts?rk[p.id]+".":""}</span>
+      <button class="name" data-a="edit" data-id="${p.id}">${esc(p.name)}</button>
+      <div class="tools">
+        <button class="icon" data-a="edit" data-id="${p.id}" aria-label="${esc(p.name)} bearbeiten">${ICON_EDIT}</button>
+        <button class="icon" data-a="reset1" data-id="${p.id}" aria-label="${esc(p.name)} zurücksetzen">${ICON_RESET}</button>
+      </div>
+      <div class="pts">
+        <button class="pbtn minus" data-a="p-" data-id="${p.id}" aria-label="Punkt abziehen">−</button>
+        <span class="score">${p.points}</span>
+        <button class="pbtn plus" data-a="p+" data-id="${p.id}" aria-label="Punkt dazu">+</button>
+      </div>
+      <div class="sch">
+        <button class="sbtn" data-a="s-" data-id="${p.id}" aria-label="Schnautz minus">−</button>
+        <div class="mid"><div class="lbl">Schnautz</div><div class="tally">${tally(p.schnautz)}</div></div>
+        <button class="sbtn" data-a="s+" data-id="${p.id}" aria-label="Schnautz plus">+</button>
+      </div>
+    </div>`).join("");
+}
+$("#list").addEventListener("click",e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;
+  const p=state.players.find(x=>x.id===b.dataset.id);if(!p)return;
+  const a=b.dataset.a;
+  if(a==="p+")p.points++;
+  else if(a==="p-")p.points=Math.max(0,p.points-1);
+  else if(a==="s+")p.schnautz++;
+  else if(a==="s-")p.schnautz=Math.max(0,p.schnautz-1);
+  else if(a==="edit")return editSheet(p);
+  else if(a==="reset1")return confirmSheet(`${p.name} zurücksetzen?`,`Punkte und Schnautz von ${p.name} gehen auf 0. Die anderen bleiben, wie sie sind.`,"Zurücksetzen",()=>{p.points=0;p.schnautz=0;changed()});
+  if(navigator.vibrate)try{navigator.vibrate(8)}catch(_){}
+  changed();
+});
+$("#addForm").addEventListener("submit",e=>{
+  e.preventDefault();const n=$("#newName").value.trim();if(!n)return;
+  const used=state.players.map(p=>p.color);
+  const color=COLORS.find(c=>!used.includes(c))||COLORS[state.players.length%COLORS.length];
+  state.players.push({id:uid(),name:n,color,points:0,schnautz:0});
+  $("#newName").value="";changed();
+});
+$("#resetAll").onclick=()=>{
+  if(!state.players.length)return;
+  confirmSheet("Alle zurücksetzen?","Alle Punkte und Schnautz-Striche gehen auf 0. Das Spiel wird nicht in der Statistik gespeichert.","Alles auf 0",()=>{state.players.forEach(p=>{p.points=0;p.schnautz=0});changed()});
+};
+const medal=n=>n<=3?`<span class="medal m${n}">${n}</span>`:`<span class="medal pl">${n}</span>`;
+$("#endGame").onclick=()=>{
+  const P=state.players;
+  if(P.length<2)return confirmSheet("Zu wenig Spieler","Für ein Spiel braucht es mindestens zwei Spieler am Tisch.",null);
+  const r=ranks(P);
+  openSheet(`<h3>Spiel beenden</h3><p>Wer am wenigsten Punkte hat, gewinnt. So geht das Spiel in die Statistik:</p>
+    <div class="rank">${r.map(p=>`<div style="${tint(p.color)}">${medal(p.place)}<span>${esc(p.name)}${p.schnautz?` <em>· ${p.schnautz}× Schnautz</em>`:""}</span><b>${p.points}</b></div>`).join("")}</div>
+    <div class="actions two"><button class="btn" data-x="close">Weiterspielen</button><button class="btn primary" data-x="ok">Speichern &amp; neues Spiel</button></div>`,
+  root=>{
+    root.querySelector('[data-x="ok"]').onclick=async()=>{
+      const g={id:uid(),endedAt:Date.now(),players:r.map(({name,color,points,schnautz,place})=>({name,color,points,schnautz,place}))};
+      P.forEach(p=>{p.points=0;p.schnautz=0});changed();closeSheet();
+      await saveGame(g);
+    };
+  });
+};
+
+/* ---------- Sheets ---------- */
+function openSheet(html,wire){
+  const root=$("#sheetRoot");
+  root.innerHTML=`<div class="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const scrim=root.firstElementChild;
+  scrim.addEventListener("click",e=>{if(e.target===scrim||e.target.closest('[data-x="close"]'))closeSheet()});
+  wire&&wire(scrim);
+}
+function closeSheet(){$("#sheetRoot").innerHTML=""}
+function confirmSheet(title,text,okLabel,onOk){
+  openSheet(`<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="actions ${okLabel?"two":""}"><button class="btn" data-x="close">${okLabel?"Abbrechen":"Alles klar"}</button>${okLabel?`<button class="btn primary" data-x="ok">${esc(okLabel)}</button>`:""}</div>`,
+    r=>{const ok=r.querySelector('[data-x="ok"]');if(ok)ok.onclick=()=>{closeSheet();onOk()}});
+}
+function editSheet(p){
+  let color=p.color;
+  const sw=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Farbe ${c}" aria-pressed="${c.toLowerCase()===color.toLowerCase()}"></button>`).join("");
+  openSheet(`<h3>Spieler bearbeiten</h3>
+    <label for="eName">Name</label><input id="eName" type="text" maxlength="24" value="${esc(p.name)}">
+    <label>Farbe der Kachel</label><div class="sw" id="sw">${sw}</div>
+    <div class="custom"><input id="eColor" type="color" value="${esc(/^#[0-9a-f]{6}$/i.test(color)?color:"#888888")}"><span>Eigene Farbe wählen</span></div>
+    <div class="preview" id="prev" style="${tint(color)}">${esc(p.name)}</div>
+    <div class="actions two"><button class="btn danger" data-x="del">Entfernen</button><button class="btn primary" data-x="ok">Speichern</button></div>`,
+  r=>{
+    const swEl=r.querySelector("#sw"),prev=r.querySelector("#prev"),nm=r.querySelector("#eName");
+    const upd=()=>{swEl.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c.toLowerCase()===color.toLowerCase()));
+      prev.setAttribute("style",tint(color));prev.textContent=nm.value.trim()||p.name};
+    swEl.onclick=e=>{const b=e.target.closest("[data-c]");if(b){color=b.dataset.c;r.querySelector("#eColor").value=color;upd()}};
+    r.querySelector("#eColor").oninput=e=>{color=e.target.value;upd()};
+    nm.oninput=upd;
+    r.querySelector('[data-x="ok"]').onclick=()=>{const n=nm.value.trim();if(n)p.name=n;p.color=color;closeSheet();changed()};
+    r.querySelector('[data-x="del"]').onclick=()=>confirmSheet(`${p.name} entfernen?`,"Der Spieler verschwindet vom Tisch. Gespeicherte Spiele in der Statistik bleiben erhalten.","Entfernen",()=>{state.players=state.players.filter(x=>x.id!==p.id);changed()});
+  });
+}
+
+/* ---------- Statistik ---------- */
+function renderStats(){
+  const V=$("#view-stats");
+  if(!games.length){V.innerHTML='<div class="empty"><b>Noch keine Spiele gespeichert</b>Tippe am Tisch auf „Spiel beenden“. Dann landen Sieger, Plätze und Schnautz hier.</div>';return}
+  const S={};
+  for(const g of games)for(const p of g.players){
+    const k=p.name.trim().toLowerCase();
+    const s=S[k]||(S[k]={name:p.name,color:p.color,games:0,w:0,s2:0,s3:0,pts:0,sch:0});
+    s.games++;s.pts+=p.points;s.sch+=p.schnautz;if(p.place===1)s.w++;else if(p.place===2)s.s2++;else if(p.place===3)s.s3++;
+  }
+  const rows=Object.values(S).sort((a,b)=>b.w-a.w||b.s2-a.s2||b.s3-a.s3||(a.pts/a.games)-(b.pts/b.games));
+  const totalSch=rows.reduce((t,r)=>t+r.sch,0);
+  const top=rows[0];
+  const fmt=new Intl.DateTimeFormat("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"});
+  V.innerHTML=`
+    <div class="cards">
+      <div class="kpi"><small>Spiele</small><b>${games.length}</b></div>
+      <div class="kpi"><small>Schnautz</small><b>${totalSch}</b></div>
+      <div class="kpi"><small>Meiste Siege</small><b>${top.w?esc(top.name):"–"}</b></div>
+    </div>
+    <h2>Rangliste</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Spieler</th><th><span class="medal m1">1</span></th><th><span class="medal m2">2</span></th><th><span class="medal m3">3</span></th><th>Spiele</th><th>Schnautz</th><th>Ø Pkt</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td><span class="dot" style="background:${esc(r.color)}"></span>${esc(r.name)}</td><td><b>${r.w}</b></td><td>${r.s2}</td><td>${r.s3}</td><td>${r.games}</td><td>${r.sch}</td><td>${(r.pts/r.games).toFixed(1).replace(".",",")}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <h2>Alle Spiele</h2>
+    <div class="games">${games.map((g,i)=>`
+      <div class="game"><div class="ghead"><span>Spiel ${games.length-i} · ${fmt.format(new Date(g.endedAt))}</span><button data-del="${g.id}">Löschen</button></div>
+      <div class="res">${g.players.map(p=>`<span class="chip" style="${tint(p.color)}">${medal(p.place)}${esc(p.name)} <em>${p.points}${p.schnautz?` · ${p.schnautz}× S`:""}</em></span>`).join("")}</div></div>`).join("")}
+    </div>`;
+  V.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>confirmSheet("Spiel löschen?","Das Spiel wird aus der Statistik entfernt. Das lässt sich nicht rückgängig machen.","Löschen",()=>deleteGame(b.dataset.del)));
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
+  const t=b.dataset.tab;
+  document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",x===b));
+  $("#view-tisch").hidden=t!=="tisch";$("#view-stats").hidden=t!=="stats";$("#bar").hidden=t!=="tisch";
+  if(t==="stats")renderStats();
+});
+
+/* ---------- Bildschirm wach halten ---------- */
+let lock=null;
+async function wake(){try{if(!lock&&navigator.wakeLock){lock=await navigator.wakeLock.request("screen");lock.addEventListener("release",()=>lock=null)}}catch(e){}}
+document.addEventListener("pointerdown",wake,{once:true});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")wake()});
+
+/* ---------- Start ---------- */
+state=lsGet("schnautz_live",{players:[]});
+games=lsGet("schnautz_games",[]);
+render();renderStats();
+
+(async()=>{
+  if(!window.claude?.use)return;
+  db=await window.claude.use("db");
+  if(!db)return;
+  liveRef=db.doc("tisch/aktuell");
+  gamesCol=db.collection("spiele");
+  const syncEl=$("#sync");
+  liveRef.onSnapshot(s=>{
+    syncEl.classList.add("on");syncEl.lastElementChild.textContent="Gespeichert & synchron";
+    if(dirty||saving)return;
+    if(s.exists){state={players:JSON.parse(JSON.stringify(s.data().players||[]))};lsSet("schnautz_live",state);render()}
+    else if(state.players.length&&!s.metadata.fromCache){persist()}
+  },e=>console.warn(e));
+  gamesCol.orderBy("endedAt","desc").limit(500).onSnapshot(s=>{
+    games=s.docs.map(d=>d.data());lsSet("schnautz_games",games);renderStats();
+  },e=>console.warn(e));
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+</script>
+</body>
+</html>
