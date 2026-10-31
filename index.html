@@ -2,9 +2,12 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Schnautz Zähler</title>
-<meta name="theme-color" content="#eef1ec">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" data-scheme="light" media="(prefers-color-scheme: light)" content="#eef1ec">
+<meta name="theme-color" data-scheme="dark" media="(prefers-color-scheme: dark)" content="#0d1511">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Schnautz">
@@ -33,11 +36,15 @@
   --bg:#0d1511; --paper:#15201a; --ink:#e7eee9; --muted:#93a399; --line:#27352d;
   --felt:#4bb187; --felt-ink:#06130d; --minus:#f07b6e; --soft:#1d2a23; color-scheme:dark}
 
-html,body{height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;
-  -webkit-tap-highlight-color:transparent;overscroll-behavior-y:contain}
+html,body{height:100%;overscroll-behavior:none}
+html{-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px}
 *{box-sizing:border-box}
-button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  transition:transform 100ms ease-out,background-color 100ms ease-out}
+input,textarea,select{font-size:16px}
+.seg button:active,.gear:active,.ghead button:active,.name:active{opacity:.7}
+.sw button:active{transform:scale(.9)}
 button:focus-visible,input:focus-visible{outline:3px solid var(--felt);outline-offset:2px}
 .wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 120px}
@@ -143,7 +150,7 @@ tr:last-child td{border-bottom:0}
 
 /* Sheet */
 .scrim{position:fixed;inset:0;background:rgb(0 0 0 / .45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--paper);width:100%;max-width:520px;border-radius:22px 22px 0 0;max-height:88%;overflow:auto;
+.sheet{background:var(--paper);width:100%;max-width:520px;border-radius:22px 22px 0 0;max-height:88dvh;overflow:auto;overscroll-behavior:contain;
   padding-top:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));
   padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));
   animation:up .22s ease-out}
@@ -187,7 +194,7 @@ tr:last-child td{border-bottom:0}
 
   <section id="view-tisch">
     <form class="add" id="addForm" autocomplete="off">
-      <input id="newName" type="text" placeholder="Spieler hinzufügen …" maxlength="24" enterkeyhint="done">
+      <input id="newName" type="text" placeholder="Spieler hinzufügen …" maxlength="24" enterkeyhint="done" autocapitalize="words" autocorrect="off" spellcheck="false">
       <button class="btn primary" type="submit">Hinzu</button>
     </form>
     <div class="list" id="list"></div>
@@ -255,7 +262,11 @@ function applyTheme(t){
   const r=document.documentElement;
   if(t==="light"||t==="dark")r.setAttribute("data-theme",t);else r.removeAttribute("data-theme");
   const dark=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);
-  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dark?"#0d1511":"#eef1ec";
+  // Statusleiste: bei "Automatisch" je Systemschema, bei fester Wahl beide Einträge auf die gewählte Farbe
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{
+    const own=m.getAttribute("data-scheme");
+    m.content=(t==="light"||t==="dark")?(dark?"#0d1511":"#eef1ec"):(own==="dark"?"#0d1511":"#eef1ec");
+  });
 }
 let theme=lsGet("schnautz_theme","auto");applyTheme(theme);
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>applyTheme(theme));
