@@ -46,10 +46,13 @@ input,textarea,select{font-size:16px}
 .seg button:active,.gear:active,.ghead button:active,.name:active{opacity:.7}
 .sw button:active{transform:scale(.9)}
 button:focus-visible,input:focus-visible{outline:3px solid var(--felt);outline-offset:2px}
-.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 120px}
+.app{height:100%;display:flex;flex-direction:column;max-width:1600px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 0}
+#view-tisch{flex:1;min-height:0;display:flex;flex-direction:column}
+#view-stats{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:24px;width:100%;margin:0 auto}
+.addbtn{padding:10px 16px;border-radius:999px}
 
-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;flex:none}
 h1{font-family:var(--display);font-weight:900;font-size:34px;line-height:1;margin:0 auto 0 0;letter-spacing:.01em;text-transform:uppercase}
 h1 span{color:var(--felt)}
 .seg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
@@ -66,61 +69,56 @@ h1 span{color:var(--felt)}
 .btn.danger{background:none;color:var(--minus);border:1.5px solid currentColor}
 .btn:active{transform:scale(.97)}
 
-/* Spielerkacheln: Farbe kommt pro Kachel über --tc (Fläche) und --ti (Schrift) */
-.list{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-.tile{--tc:#888;--ti:#fff;background:var(--tc);color:var(--ti);border-radius:22px;padding:14px;
-  display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"place name tools" "pts pts pts" "sch sch sch";
-  gap:10px;align-items:center;box-shadow:0 1px 0 rgb(0 0 0 / .06),inset 0 0 0 1px rgb(0 0 0 / .06);transition:background .2s}
-.place{grid-area:place;font-family:var(--display);font-weight:900;font-size:24px;min-width:26px;opacity:.75}
-.name{grid-area:name;border:0;background:none;color:inherit;text-align:left;font-weight:700;font-size:20px;padding:4px 0;
-  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Spielerkacheln: Farbe pro Kachel über --tc (Fläche) und --ti (Schrift).
+   Die Liste füllt den freien Platz, JS wählt Spalten x Reihen so, dass alle Spieler sichtbar sind;
+   der Inhalt jeder Kachel skaliert mit ihrer Größe (Container-Einheiten cqh/cqw). */
+.list{flex:1;min-height:0;display:grid;gap:12px;overflow-y:auto;overscroll-behavior:contain;
+  grid-template-columns:minmax(0,1fr);align-content:stretch;padding-bottom:2px}
+.list .empty{grid-column:1/-1;align-self:start}
+.tile{--tc:#888;--ti:#fff;background:var(--tc);color:var(--ti);border-radius:20px;container-type:size;
+  min-width:0;min-height:0;overflow:hidden;box-shadow:0 1px 0 rgb(0 0 0 / .06),inset 0 0 0 1px rgb(0 0 0 / .06);transition:background .2s}
+.tin{height:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"place name tools" "pts pts pts" "sch sch sch";gap:clamp(4px,4cqh,12px) 8px;align-items:center;
+  padding:clamp(8px,5cqh,18px) clamp(10px,4cqw,20px)}
+.place{grid-area:place;font-family:var(--display);font-weight:900;font-size:clamp(16px,min(10cqh,7cqw),30px);min-width:1.1em;opacity:.75}
+.name{grid-area:name;border:0;background:none;color:inherit;text-align:left;font-weight:700;font-size:clamp(16px,min(10cqh,7cqw),30px);
+  line-height:1.2;padding:2px 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tools{grid-area:tools;display:flex;gap:2px}
-.icon{border:0;background:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:inherit;opacity:.8}
+.icon{--s:clamp(36px,15cqh,46px);border:0;background:none;width:var(--s);height:var(--s);border-radius:10px;display:grid;place-items:center;color:inherit;opacity:.8}
 .icon:active{background:color-mix(in srgb,var(--ti) 16%,transparent)}
-.icon svg{width:20px;height:20px}
+.icon svg{width:58%;height:58%;min-width:20px;min-height:20px}
 
-.pts{grid-area:pts;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px}
-.pbtn{width:64px;height:64px;border-radius:18px;border:0;font-size:34px;font-weight:700;line-height:1;display:grid;place-items:center}
+.pts{grid-area:pts;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;min-height:0}
+.pbtn{--s:clamp(44px,min(34cqh,22cqw),100px);width:var(--s);height:var(--s);border-radius:calc(var(--s) * .26);border:0;
+  font-size:calc(var(--s) * .5);font-weight:700;line-height:1;display:grid;place-items:center}
 .pbtn.minus{background:color-mix(in srgb,var(--ti) 16%,transparent);color:var(--ti)}
 .pbtn.plus{background:var(--ti);color:var(--tc)}
 .pbtn:active{transform:scale(.94)}
-.score{font-family:var(--display);font-weight:900;font-size:64px;line-height:1;text-align:center;font-variant-numeric:tabular-nums}
+.score{font-family:var(--display);font-weight:900;font-size:clamp(36px,min(40cqh,24cqw),140px);line-height:.9;text-align:center;font-variant-numeric:tabular-nums}
 
-.sch{grid-area:sch;display:flex;align-items:center;gap:10px;min-width:0;padding-top:10px;
+.sch{grid-area:sch;display:flex;align-items:center;gap:8px;min-width:0;padding-top:clamp(4px,3cqh,10px);
   border-top:1px solid color-mix(in srgb,var(--ti) 22%,transparent)}
-.sch .mid{flex:1;min-width:0}
-.sch .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.75}
-.sbtn{width:40px;height:40px;border-radius:12px;border:1.5px solid color-mix(in srgb,var(--ti) 35%,transparent);background:none;color:inherit;font-weight:700;font-size:20px;line-height:1}
+.sch .mid{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
+.sch .lbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;opacity:.75;flex:none}
+.sbtn{--s:clamp(30px,16cqh,46px);width:var(--s);height:var(--s);flex:none;border-radius:10px;border:1.5px solid color-mix(in srgb,var(--ti) 35%,transparent);
+  background:none;color:inherit;font-weight:700;font-size:calc(var(--s) * .5);line-height:1}
 .sbtn:active{background:color-mix(in srgb,var(--ti) 16%,transparent)}
-.tally{display:flex;flex-wrap:wrap;gap:7px;align-items:center;min-height:26px}
-.five{position:relative;display:inline-flex;gap:3px;height:22px}
-.five i{display:block;width:3px;height:22px;background:currentColor;border-radius:2px}
+.tally{display:flex;flex-wrap:nowrap;gap:6px;align-items:center;min-width:0;flex:1;overflow:hidden}
+.five{--h:clamp(14px,10cqh,24px);position:relative;display:inline-flex;gap:3px;height:var(--h);flex:none;margin-inline:3px}
+.five i{display:block;width:3px;height:var(--h);background:currentColor;border-radius:2px}
 .five.done::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:3px;background:currentColor;border-radius:2px;transform:rotate(-28deg)}
-.tnum{font-family:var(--display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;margin-left:auto}
-.tzero{opacity:.7;font-size:13px}
+.tnum{font-family:var(--display);font-weight:800;font-size:clamp(16px,11cqh,26px);font-variant-numeric:tabular-nums;flex:none}
+.tzero{opacity:.7;font-size:13px;white-space:nowrap}
 
 .empty{background:var(--paper);border:1.5px dashed var(--line);border-radius:18px;padding:28px 18px;text-align:center;color:var(--muted)}
 .empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
 
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);
-  padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{flex:none;padding-block:10px}
 .bar .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
-.bar .btn{padding:15px}
-.note{font-size:12px;color:var(--muted);text-align:center;margin-top:14px}
+.bar .btn{padding:14px}
 
-/* Tablet: größer, mehr Luft */
-@media (min-width:760px){
-  body{font-size:16px}
-  h1{font-size:42px}
-  .list{gap:16px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
-  .tile{padding:18px;border-radius:26px}
-  .name{font-size:24px}
-  .pbtn{width:80px;height:80px;font-size:42px;border-radius:22px}
-  .score{font-size:84px}
-  .bar .btn{padding:18px;font-size:17px}
-}
+@media (min-width:760px){body{font-size:16px}.list{gap:14px}.bar .btn{font-size:16px}}
+@media (max-width:560px){.addbtn span{display:none}.addbtn{font-size:22px;padding:4px 16px}.bar .btn{padding:12px 8px;font-size:14px}}
 
 /* Statistik */
 .statwrap{max-width:900px}
@@ -182,9 +180,10 @@ tr:last-child td{border-bottom:0}
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;max-width:calc(100% - 32px);text-align:center}
 </style>
 
-<div class="wrap">
+<div class="app">
   <header>
     <h1>Schnautz<span>.</span></h1>
+    <button class="btn primary addbtn" id="addBtn" aria-label="Spieler hinzufügen">+<span> Spieler</span></button>
     <div class="seg" role="tablist">
       <button id="tab-tisch" role="tab" aria-selected="true" data-tab="tisch">Tisch</button>
       <button id="tab-stats" role="tab" aria-selected="false" data-tab="stats">Statistik</button>
@@ -193,21 +192,16 @@ tr:last-child td{border-bottom:0}
   </header>
 
   <section id="view-tisch">
-    <form class="add" id="addForm" autocomplete="off">
-      <input id="newName" type="text" placeholder="Spieler hinzufügen …" maxlength="24" enterkeyhint="done" autocapitalize="words" autocorrect="off" spellcheck="false">
-      <button class="btn primary" type="submit">Hinzu</button>
-    </form>
     <div class="list" id="list"></div>
-    <div class="note"><span class="sync" id="sync"><i></i><span>Auf diesem Gerät gespeichert</span></span></div>
   </section>
 
   <section id="view-stats" class="statwrap" hidden></section>
-</div>
 
-<div class="bar" id="bar">
-  <div class="in">
-    <button class="btn" id="resetAll">Alle zurücksetzen</button>
-    <button class="btn primary" id="endGame">Spiel beenden</button>
+  <div class="bar" id="bar">
+    <div class="in">
+      <button class="btn" id="resetAll">Alle zurücksetzen</button>
+      <button class="btn primary" id="endGame">Spiel beenden</button>
+    </div>
   </div>
 </div>
 
@@ -221,7 +215,7 @@ const COLORS=["#e63946","#f77f00","#fcbf49","#8ac926","#2a9d8f","#1982c4","#6a4c
 let state={players:[]};
 let games=[];
 let db=null, liveRef=null, gamesCol=null;
-let dirty=false, saving=false, saveTimer=null;
+let dirty=false, saving=false, saveTimer=null, synced=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
@@ -279,6 +273,7 @@ $("#settingsBtn").onclick=()=>{
     <label>Daten sichern</label>
     <div class="actions two" style="margin-top:0"><button class="btn" id="bkSave">Sichern</button><button class="btn" id="bkLoad">Wiederherstellen</button></div>
     <div class="small">${games.length} gespeicherte ${games.length===1?"Spiel":"Spiele"} und ${state.players.length} Spieler am Tisch. „Sichern“ speichert alles als Datei, „Wiederherstellen“ spielt eine solche Datei wieder ein, auch auf einem anderen Gerät.</div>
+    <div class="small">${synced?"Die Daten werden in Claude gespeichert und zwischen Geräten abgeglichen.":"Die Daten liegen auf diesem Gerät."}</div>
     <div class="actions"><button class="btn primary" data-x="close">Fertig</button></div>`,r=>{
     r.querySelector("#bkSave").onclick=exportBackup;
     r.querySelector("#bkLoad").onclick=()=>{const f=$("#bkFile");f.value="";f.click()};
@@ -342,24 +337,40 @@ $("#bkFile").addEventListener("change",async e=>{
 });
 
 /* ---------- Tisch ---------- */
+// Spalten x Reihen so wählen, dass alle Spieler auf einen Bildschirm passen (Kachel mind. 150px hoch)
+function layout(){
+  const L=$("#list"),n=state.players.length;
+  if(!n||L.offsetParent===null){L.style.gridTemplateColumns="";L.style.gridTemplateRows="";return}
+  const gap=parseFloat(getComputedStyle(L).rowGap)||12,W=L.clientWidth,H=L.clientHeight;
+  const MINH=150,MINW=Math.min(250,W);let best=null;
+  for(let c=1;c<=n;c++){
+    const w=(W-gap*(c-1))/c;if(c>1&&w<MINW)break;
+    const r=Math.ceil(n/c),h=(H-gap*(r-1))/r;
+    const score=(h>=MINH?1e4:0)+Math.min(w,h*1.9)-(c*r-n)*6;
+    if(!best||score>best.score)best={c,r,h,score};
+  }
+  L.style.gridTemplateColumns=`repeat(${best.c},minmax(0,1fr))`;
+  L.style.gridTemplateRows=`repeat(${best.r},${best.h>=MINH?`minmax(${MINH}px,1fr)`:MINH+"px"})`;
+}
+try{new ResizeObserver(()=>layout()).observe($("#list"))}catch(e){addEventListener("resize",layout)}
 function tally(n){
   if(!n)return '<span class="tzero">noch keiner</span>';
   let h="",left=n;const groups=Math.min(Math.ceil(n/5),4);
   for(let g=0;g<groups&&left>0;g++){const c=Math.min(5,left);left-=c;
     h+=`<span class="five${c===5?" done":""}">${"<i></i>".repeat(Math.min(c,4))}</span>`}
   if(n>20)h+='<span>…</span>';
-  return h+`<span class="tnum">${n}</span>`;
+  return h;
 }
 const ICON_RESET='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>';
 const ICON_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 
 function render(){
   const L=$("#list"), P=state.players;
-  if(!P.length){L.innerHTML='<div class="empty"><b>Noch niemand am Tisch</b>Trag oben die Namen ein. Jeder bekommt eine eigene Farbe, Punkte und Schnautz-Striche.</div>';return}
+  if(!P.length){L.innerHTML='<div class="empty"><b>Noch niemand am Tisch</b>Tippe oben auf „+ Spieler“. Jeder bekommt eine eigene Farbe, Punkte und Schnautz-Striche.</div>';layout();return}
   const anyPts=P.some(p=>p.points>0);
   const rk=Object.fromEntries(ranks(P).map(p=>[p.id,p.place]));
   L.innerHTML=P.map(p=>`
-    <div class="tile" style="--tc:${esc(p.color)};--ti:${inkOn(p.color)}">
+    <div class="tile" style="--tc:${esc(p.color)};--ti:${inkOn(p.color)}"><div class="tin">
       <span class="place">${anyPts?rk[p.id]+".":""}</span>
       <button class="name" data-a="edit" data-id="${p.id}">${esc(p.name)}</button>
       <div class="tools">
@@ -373,10 +384,11 @@ function render(){
       </div>
       <div class="sch">
         <button class="sbtn" data-a="s-" data-id="${p.id}" aria-label="Schnautz minus">−</button>
-        <div class="mid"><div class="lbl">Schnautz</div><div class="tally">${tally(p.schnautz)}</div></div>
+        <div class="mid"><div class="lbl">Schnautz</div><div class="tally">${tally(p.schnautz)}</div>${p.schnautz?`<span class="tnum">${p.schnautz}</span>`:""}</div>
         <button class="sbtn" data-a="s+" data-id="${p.id}" aria-label="Schnautz plus">+</button>
       </div>
-    </div>`).join("");
+    </div></div>`).join("");
+  layout();
 }
 $("#list").addEventListener("click",e=>{
   const b=e.target.closest("[data-a]");if(!b)return;
@@ -391,13 +403,27 @@ $("#list").addEventListener("click",e=>{
   if(navigator.vibrate)try{navigator.vibrate(8)}catch(_){}
   changed();
 });
-$("#addForm").addEventListener("submit",e=>{
-  e.preventDefault();const n=$("#newName").value.trim();if(!n)return;
+function addPlayer(n){
   const used=state.players.map(p=>p.color);
   const color=COLORS.find(c=>!used.includes(c))||COLORS[state.players.length%COLORS.length];
-  state.players.push({id:uid(),name:n,color,points:0,schnautz:0});
-  $("#newName").value="";changed();
-});
+  state.players.push({id:uid(),name:n,color,points:0,schnautz:0});changed();
+}
+$("#addBtn").onclick=()=>{
+  openSheet(`<h3>Spieler hinzufügen</h3>
+    <p>Name eintippen und mit „Hinzu“ oder der Eingabetaste bestätigen. Mehrere Spieler gehen direkt nacheinander.</p>
+    <form class="add" id="addForm" autocomplete="off">
+      <input id="newName" type="text" placeholder="Name" maxlength="24" enterkeyhint="done" autocapitalize="words" autocorrect="off" spellcheck="false">
+      <button class="btn primary" type="submit">Hinzu</button>
+    </form>
+    <div class="res" id="addedList"></div>
+    <div class="actions"><button class="btn" data-x="close">Fertig</button></div>`,r=>{
+    const inp=r.querySelector("#newName"),list=r.querySelector("#addedList");
+    const show=()=>list.innerHTML=state.players.map(p=>`<span class="chip" style="${tint(p.color)};padding:6px 12px">${esc(p.name)}</span>`).join("");
+    show();
+    r.querySelector("#addForm").onsubmit=e=>{e.preventDefault();const n=inp.value.trim();if(!n)return;addPlayer(n);inp.value="";show();inp.focus()};
+    setTimeout(()=>inp.focus(),60);
+  });
+};
 $("#resetAll").onclick=()=>{
   if(!state.players.length)return;
   confirmSheet("Alle zurücksetzen?","Alle Punkte und Schnautz-Striche gehen auf 0. Das Spiel wird nicht in der Statistik gespeichert.","Alles auf 0",()=>{state.players.forEach(p=>{p.points=0;p.schnautz=0});changed()});
@@ -491,7 +517,7 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{
   const t=b.dataset.tab;
   document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",x===b));
   $("#view-tisch").hidden=t!=="tisch";$("#view-stats").hidden=t!=="stats";$("#bar").hidden=t!=="tisch";
-  if(t==="stats")renderStats();
+  if(t==="stats")renderStats();else layout();
 });
 
 /* ---------- Bildschirm wach halten ---------- */
@@ -511,9 +537,8 @@ render();renderStats();
   if(!db)return;
   liveRef=db.doc("tisch/aktuell");
   gamesCol=db.collection("spiele");
-  const syncEl=$("#sync");
   liveRef.onSnapshot(s=>{
-    syncEl.classList.add("on");syncEl.lastElementChild.textContent="Gespeichert & synchron";
+    synced=true;
     if(dirty||saving)return;
     if(s.exists){state={players:JSON.parse(JSON.stringify(s.data().players||[]))};lsSet("schnautz_live",state);render()}
     else if(state.players.length&&!s.metadata.fromCache){persist()}
