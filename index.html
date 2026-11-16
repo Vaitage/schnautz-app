@@ -161,9 +161,14 @@ tr:last-child td{border-bottom:0}
 .sheet input[type=text]{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
 .sheet .seg{width:100%}.sheet .seg button{flex:1}
 .sw{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
-.sw button{aspect-ratio:1;max-width:100%;border-radius:50%;border:0;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15)}
+.sw button{aspect-ratio:1;max-width:100%;border-radius:50%;border:0;box-shadow:inset 0 0 0 1px rgb(0 0 0 / .15);display:grid;place-items:center;padding:0}
+.sw button svg{width:58%;height:58%;opacity:0;transform:scale(.6);transition:opacity .12s,transform .12s}
 .sw button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
-.custom{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--muted)}
+.sw button[aria-pressed="true"] svg{opacity:1;transform:none}
+.custom{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px;color:var(--muted);border-radius:12px;padding:4px 8px 4px 4px;width:max-content;max-width:100%}
+.custom.on{outline:3px solid var(--ink);color:var(--ink);font-weight:600}
+.sheet label.custom{display:flex;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;margin:12px 0 0;cursor:pointer}
+.sheet label.custom.on{font-weight:600;color:var(--ink)}
 .custom input{width:46px;height:36px;border:0;padding:0;background:none}
 .preview{margin-top:14px;border-radius:16px;padding:12px 14px;font-weight:700;font-size:18px}
 .actions{display:grid;gap:8px;margin-top:18px}
@@ -459,22 +464,30 @@ function confirmSheet(title,text,okLabel,onOk){
     r=>{const ok=r.querySelector('[data-x="ok"]');if(ok)ok.onclick=()=>{closeSheet();onOk()}});
 }
 function editSheet(p){
-  let color=p.color;
-  const sw=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-label="Farbe ${c}" aria-pressed="${c.toLowerCase()===color.toLowerCase()}"></button>`).join("");
+  // Farbe und Name werden sofort übernommen; die gewählte Farbe ist mit Haken markiert
+  const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const same=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
+  const sw=COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c};color:${inkOn(c)}" aria-label="Farbe ${c}" aria-pressed="${same(c,p.color)}">${CHECK}</button>`).join("");
   openSheet(`<h3>Spieler bearbeiten</h3>
-    <label for="eName">Name</label><input id="eName" type="text" maxlength="24" value="${esc(p.name)}">
+    <label for="eName">Name</label><input id="eName" type="text" maxlength="24" value="${esc(p.name)}" autocapitalize="words" autocorrect="off" spellcheck="false" enterkeyhint="done">
     <label>Farbe der Kachel</label><div class="sw" id="sw">${sw}</div>
-    <div class="custom"><input id="eColor" type="color" value="${esc(/^#[0-9a-f]{6}$/i.test(color)?color:"#888888")}"><span>Eigene Farbe wählen</span></div>
-    <div class="preview" id="prev" style="${tint(color)}">${esc(p.name)}</div>
-    <div class="actions two"><button class="btn danger" data-x="del">Entfernen</button><button class="btn primary" data-x="ok">Speichern</button></div>`,
+    <label class="custom" id="customRow"><input id="eColor" type="color" value="${esc(/^#[0-9a-f]{6}$/i.test(p.color)?p.color:"#888888")}"><span>Eigene Farbe wählen</span></label>
+    <div class="preview" id="prev" style="${tint(p.color)}">${esc(p.name)}</div>
+    <div class="actions two"><button class="btn danger" data-x="del">Entfernen</button><button class="btn primary" data-x="close">Fertig</button></div>`,
   r=>{
-    const swEl=r.querySelector("#sw"),prev=r.querySelector("#prev"),nm=r.querySelector("#eName");
-    const upd=()=>{swEl.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c.toLowerCase()===color.toLowerCase()));
-      prev.setAttribute("style",tint(color));prev.textContent=nm.value.trim()||p.name};
-    swEl.onclick=e=>{const b=e.target.closest("[data-c]");if(b){color=b.dataset.c;r.querySelector("#eColor").value=color;upd()}};
-    r.querySelector("#eColor").oninput=e=>{color=e.target.value;upd()};
-    nm.oninput=upd;
-    r.querySelector('[data-x="ok"]').onclick=()=>{const n=nm.value.trim();if(n)p.name=n;p.color=color;closeSheet();changed()};
+    const swEl=r.querySelector("#sw"),prev=r.querySelector("#prev"),nm=r.querySelector("#eName"),cust=r.querySelector("#customRow"),picker=r.querySelector("#eColor");
+    const upd=()=>{
+      let hit=false;
+      swEl.querySelectorAll("button").forEach(b=>{const on=same(b.dataset.c,p.color);hit=hit||on;b.setAttribute("aria-pressed",on)});
+      cust.classList.toggle("on",!hit);
+      prev.setAttribute("style",tint(p.color));prev.textContent=p.name;
+    };
+    const setColor=c=>{p.color=c;if(/^#[0-9a-f]{6}$/i.test(c))picker.value=c;upd();changed()};
+    swEl.onclick=e=>{const b=e.target.closest("[data-c]");if(b)setColor(b.dataset.c)};
+    picker.oninput=e=>setColor(e.target.value);
+    nm.oninput=()=>{const n=nm.value.trim();if(n){p.name=n;upd();changed()}};
+    nm.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();nm.blur()}};
+    upd();
     r.querySelector('[data-x="del"]').onclick=()=>confirmSheet(`${p.name} entfernen?`,"Der Spieler verschwindet vom Tisch. Gespeicherte Spiele in der Statistik bleiben erhalten.","Entfernen",()=>{state.players=state.players.filter(x=>x.id!==p.id);changed()});
   });
 }
